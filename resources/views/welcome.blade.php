@@ -117,7 +117,7 @@
                             </svg>
 
                             
-                            <a href="#" class="ml-1 underline">
+                            <a href="{{ route('paypal.pay') }}" class="ml-1 underline">
                                 Paypal
                             </a>
                         </div>
