@@ -1,7 +1,8 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\PaymentController; 
+use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\ResultController;
 
 /*
 |--------------------------------------------------------------------------
@@ -18,5 +19,10 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+Route::get('/results', [ResultController::class, 'results'])->name('results');
+
 //Payment
+
 Route::get('/paypal/pay', [PaymentController::class, 'payWithPaypal'])->name('paypal.pay');
+
+Route::get('/paypal/status', [PaymentController::class, 'paypalStatus'])->name('paypal.status');

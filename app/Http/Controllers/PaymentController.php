@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 use PayPal\Auth\OAuthTokenCredential;
 use Illuminate\Support\Facades\Config;
 use PayPal\Exception\PayPalConnectionException;
-use PayPal\Api\{Amount, Payer, Payment, RedirectUrls, Transaction};
+use PayPal\Api\{Amount, Payer, Payment, PaymentExecution, RedirectUrls, Transaction};
 
 class PaymentController extends Controller
 {
@@ -37,9 +37,11 @@ class PaymentController extends Controller
         $transaction = new Transaction();
         $transaction->setAmount($amount);
 
+        $callbackUrl = url('/paypal/status');
+
         $redirectUrls = new RedirectUrls();
-        $redirectUrls->setReturnUrl("https://example.com/your_redirect_url.html")
-            ->setCancelUrl("https://example.com/your_cancel_url.html");
+        $redirectUrls->setReturnUrl($callbackUrl)
+            ->setCancelUrl($callbackUrl);
 
         $payment = new Payment();
         $payment->setIntent('sale')
@@ -47,18 +49,48 @@ class PaymentController extends Controller
             ->setTransactions(array($transaction))
             ->setRedirectUrls($redirectUrls);
 
-        
+
         try {
             $payment->create($this->apiContext);
-            
+
             // echo $payment;
 
             return redirect()->away($payment->getApprovalLink());
-            
         } catch (PayPalConnectionException $ex) {
             // This will print the detailed information on the exception.
             //REALLY HELPFUL FOR DEBUGGING
             echo $ex->getData();
         }
+    }
+
+    public function paypalStatus(Request $request)
+    {
+        $paymentId = $request->input('paymentId');
+        $payerId = $request->input('PayerID');
+        $token = $request->input('token');
+
+        $status = 'No se pudo proceder con el pago de paypal';
+
+        if (!$paymentId || !$payerId || !$token) {
+            return redirect('/paypal/failed')->with(compact('status'));
+        }
+
+        $payment = Payment::get($paymentId, $this->apiContext);
+
+        $execution = new PaymentExecution();
+        $execution->setPayerId($payerId);
+
+        /**Execute the payment  */
+
+        $result = $payment->execute($execution, $this->apiContext);
+        // dd($result);
+
+        if ($result->getState() === 'approved') {
+            $status = 'Gracias ! El pago a través de Paypal se ha realizado correctamente.';
+            return redirect('/results')->with(compact('status'));
+        }
+
+        $status = 'Lo sentimos ! El pago a través de Paypal no se pudo realizar.';
+        return redirect('/results')->with(compact('status'));
     }
 }
